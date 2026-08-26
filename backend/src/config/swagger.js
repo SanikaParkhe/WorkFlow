@@ -8,6 +8,10 @@ const options = {
       version: '1.0.0',
       description: 'Project management and issue-tracking platform API',
     },
+    tags: [
+      { name: 'Auth', description: 'Authentication and user profile' },
+      { name: 'Projects', description: 'Project management and membership' },
+    ],
     servers: [
       {
         url: 'http://localhost:5000',
