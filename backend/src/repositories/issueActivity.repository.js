@@ -28,4 +28,17 @@ const findByIssueId = async (issueId) => {
     return result.rows;
 };
 
-module.exports = { insert, findByIssueId };
+const findByIssueIdDesc = async (issueId) => {
+    const result = await pool.query(
+        `SELECT ia.id, ia.field_changed, ia.old_value, ia.new_value, ia.created_at,
+            u.id AS user_id, u.name AS user_name, u.email AS user_email
+     FROM   issue_activity ia
+     JOIN   users u ON u.id = ia.user_id
+     WHERE  ia.issue_id = $1
+     ORDER  BY ia.created_at DESC`,
+        [issueId]
+    );
+    return result.rows;
+};
+
+module.exports = { insert, findByIssueId, findByIssueIdDesc };
