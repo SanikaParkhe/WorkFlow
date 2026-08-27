@@ -16,4 +16,15 @@ const validateParams = (schema) => (req, res, next) => {
   }
 };
 
-module.exports = { validate, validateParams };
+const validateQuery = (schema) => (req, res, next) => {
+  try {
+    // Express 5 makes req.query read-only; store the parsed+coerced
+    // result on req.parsedQuery so controllers can access typed values.
+    req.parsedQuery = schema.parse(req.query);
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { validate, validateParams, validateQuery };
