@@ -6,7 +6,7 @@ const {
   loadProject,
   requireProjectMember,
 } = require('../middleware/project.middleware');
-const { validate, validateParams } = require('../middleware/validate.middleware');
+const { validate, validateParams, validateQuery } = require('../middleware/validate.middleware');
 const {
   createProjectSchema,
   updateProjectSchema,
@@ -14,6 +14,8 @@ const {
   projectMemberParamsSchema,
   addMemberSchema,
 } = require('../validators/project.validator');
+const dashboardController = require('../controllers/dashboard.controller');
+const { dashboardParamSchema, dashboardQuerySchema } = require('../validators/dashboard.validator');
 
 const router = express.Router();
 
@@ -239,6 +241,102 @@ router.delete(
   validateParams(projectMemberParamsSchema),
   requireProjectManager,
   projectController.removeMember
+);
+
+/**
+ * @swagger
+ * /api/projects/{id}/dashboard:
+ *   get:
+ *     tags: [Dashboard]
+ *     summary: Get project dashboard aggregations
+ *     description: >
+ *       Returns five aggregated metrics computed entirely in PostgreSQL:
+ *       issue counts by status and priority, workload per assignee,
+ *       average resolution time for closed (done) issues, and the most
+ *       recent activity across all project issues.
+ *       Only authenticated project members may access this endpoint.
+ *       Non-members receive 404 to avoid leaking project existence.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Project UUID
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         description: Number of recent activity entries to return (1–100, default 10)
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+ *     responses:
+ *       200:
+ *         description: Dashboard data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     byStatus:
+ *                       type: object
+ *                       description: Issue count per status (all statuses always present)
+ *                       example: { backlog: 4, todo: 8, in_progress: 3, in_review: 2, done: 10 }
+ *                     byPriority:
+ *                       type: object
+ *                       description: Issue count per priority (all priorities always present)
+ *                       example: { low: 5, medium: 10, high: 8, critical: 4 }
+ *                     byAssignee:
+ *                       type: array
+ *                       description: Workload per assignee; assigneeId=null means unassigned
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           assigneeId:    { type: string, format: uuid, nullable: true }
+ *                           assigneeName:  { type: string, nullable: true }
+ *                           assigneeEmail: { type: string, nullable: true }
+ *                           issueCount:    { type: integer }
+ *                     averageResolutionTimeSeconds:
+ *                       type: number
+ *                       nullable: true
+ *                       description: >
+ *                         Average seconds from created_at to updated_at for done issues.
+ *                         Null when no done issues exist.
+ *                     recentActivity:
+ *                       type: array
+ *                       description: Latest activity entries, newest first
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:           { type: string, format: uuid }
+ *                           issueId:      { type: string, format: uuid }
+ *                           issueTitle:   { type: string }
+ *                           fieldChanged: { type: string }
+ *                           oldValue:     { type: string, nullable: true }
+ *                           newValue:     { type: string, nullable: true }
+ *                           createdAt:    { type: string, format: date-time }
+ *                           user:
+ *                             type: object
+ *                             properties:
+ *                               id:    { type: string, format: uuid }
+ *                               name:  { type: string }
+ *                               email: { type: string }
+ *       400:
+ *         description: Validation error (invalid UUID or limit out of range)
+ *       401:
+ *         description: Unauthorized — JWT missing or invalid
+ *       404:
+ *         description: Project not found or caller is not a project member
+ */
+router.get(
+  '/:id/dashboard',
+  validateParams(dashboardParamSchema),
+  requireProjectMember,
+  validateQuery(dashboardQuerySchema),
+  dashboardController.get
 );
 
 module.exports = router;
