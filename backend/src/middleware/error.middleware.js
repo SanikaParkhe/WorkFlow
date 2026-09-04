@@ -34,7 +34,17 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  console.error(err);
+  // In development log the full stack for easy debugging; in production
+  // only log a condensed message so stack traces, SQL, and filesystem paths
+  // never appear in server logs that might be forwarded to external services.
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(err);
+  } else {
+    console.error(`[ERROR] ${err.message}`);
+  }
+
+  // Never expose stack traces, SQL queries, database credentials, or any
+  // internal implementation detail to the client response.
   return res.status(500).json({
     success: false,
     error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },

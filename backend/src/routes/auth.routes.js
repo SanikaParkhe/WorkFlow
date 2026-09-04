@@ -2,6 +2,7 @@ const express = require('express');
 const authController = require('../controllers/auth.controller');
 const { validate } = require('../middleware/validate.middleware');
 const authenticate = require('../middleware/auth.middleware');
+const { authLimiter } = require('../middleware/rateLimiter.middleware');
 const {
   registerSchema,
   loginSchema,
@@ -36,8 +37,10 @@ const router = express.Router();
  *         description: User registered successfully
  *       409:
  *         description: Email already registered
+ *       429:
+ *         description: Too many registration attempts
  */
-router.post('/register', validate(registerSchema), authController.register);
+router.post('/register', authLimiter, validate(registerSchema), authController.register);
 
 /**
  * @swagger
@@ -60,8 +63,10 @@ router.post('/register', validate(registerSchema), authController.register);
  *         description: Login successful
  *       401:
  *         description: Invalid credentials
+ *       429:
+ *         description: Too many login attempts
  */
-router.post('/login', validate(loginSchema), authController.login);
+router.post('/login', authLimiter, validate(loginSchema), authController.login);
 
 /**
  * @swagger
@@ -83,8 +88,10 @@ router.post('/login', validate(loginSchema), authController.login);
  *         description: Tokens refreshed
  *       401:
  *         description: Invalid or expired refresh token
+ *       429:
+ *         description: Too many refresh attempts
  */
-router.post('/refresh', validate(refreshSchema), authController.refresh);
+router.post('/refresh', authLimiter, validate(refreshSchema), authController.refresh);
 
 /**
  * @swagger
